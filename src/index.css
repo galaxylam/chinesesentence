@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* Lock font-feature for tighter CJK spacing */
+    font-feature-settings: 'palt';
+    -webkit-text-size-adjust: 100%;
+    /* Safe areas for iOS notches */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-cream text-slate-800 font-zh antialiased;
+    /* Use dynamic viewport for mobile browsers */
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+
+  /* Respect reduced motion globally */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  /* Disable tap highlight on iOS for a cleaner feel */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 0rem);
+  }
+
+  /* Kid-friendly input styling */
+  .zh-input {
+    @apply font-zh text-zh-xl bg-white border-2 border-slate-200 rounded-2xl
+      px-4 py-3 outline-none transition-all duration-200
+      focus:border-primary focus:ring-4 focus:ring-primary/15
+      placeholder:text-slate-400 placeholder:font-normal;
+  }
+
+  /* Touch target baseline (48x48) */
+  .tap {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Mark highlight used inside ExampleSentence */
+  .mark-cat-time        { @apply bg-cat-time/15 text-cat-time font-bold rounded px-1; }
+  .mark-cat-idiom_action,
+  .mark-cat-idiom_mood,
+  .mark-cat-idiom_result,
+  .mark-cat-idiom_scene  { @apply bg-cat-idiom_action/15 text-emerald-700 font-bold rounded px-1; }
+  .mark-cat-thing        { @apply bg-cat-thing/15 text-amber-700 font-bold rounded px-1; }
+  .mark-cat-verb         { @apply bg-cat-verb/15 text-red-700 font-bold rounded px-1; }
+  .mark-cat-person       { @apply bg-cat-person/15 text-purple-700 font-bold rounded px-1; }
+  .mark-cat-place        { @apply bg-cat-place/15 text-cyan-700 font-bold rounded px-1; }
+  .mark-cat-adjective    { @apply bg-cat-adjective/15 text-pink-700 font-bold rounded px-1; }
+  .mark-cat-adverb       { @apply bg-cat-adverb/15 text-violet-700 font-bold rounded px-1; }
+  .mark-cat-conjunction  { @apply bg-cat-conjunction/15 text-slate-700 font-bold rounded px-1; }
+  .mark-cat-measure      { @apply bg-cat-measure/15 text-lime-700 font-bold rounded px-1; }
+  .mark-cat-pronoun      { @apply bg-cat-pronoun/20 text-slate-700 rounded px-1; }
+}
