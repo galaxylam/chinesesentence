@@ -3,6 +3,7 @@ import {
   MAX_RETRIES,
   OPENROUTER_ENDPOINT,
   SCORING_TIMEOUT_MS,
+  USE_JSON_MODE,
 } from '../constants/config'
 
 export interface ChatMessage {
@@ -24,10 +25,13 @@ interface OpenRouterResponse {
 
 /**
  * Send a chat completion to OpenRouter and return the raw content string.
- * Always requests JSON-mode output.
+ *
+ * JSON-mode is OPTIONAL — if the underlying model doesn't honour
+ * `response_format: json_object`, the response may be wrapped in markdown
+ * fences, which the parser handles downstream.
  *
  * Retries up to MAX_RETRIES times on transient failures (5xx, 429, network).
- * Throws an Error with a friendly message otherwise so callers can show a toast.
+ * Logs every step to the browser console for debugging.
  */
 export async function chat(
   messages: ChatMessage[],
@@ -38,20 +42,31 @@ export async function chat(
     throw new Error('缺少 OpenRouter API key，請在設定中填寫。')
   }
 
+  const model = opts.model ?? DEFAULT_MODEL
+  console.info('[openrouter] → request', {
+    model,
+    useJsonMode: USE_JSON_MODE,
+    messages: messages.length,
+  })
+
   let lastErr: unknown = null
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const content = await chatOnce(messages, opts, apiKey)
+      const content = await chatOnce(messages, opts, apiKey, model)
+      console.info('[openrouter] ← success', { length: content.length })
       return content
     } catch (err) {
       lastErr = err
+      console.warn('[openrouter] ✖ attempt failed', {
+        attempt,
+        error: err instanceof Error ? err.message : String(err),
+      })
       // Don't retry on hard client errors (4xx other than 429).
       if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 429) {
         break
       }
-      // Wait briefly before retrying.
       if (attempt < MAX_RETRIES) {
-        await sleep(500 * (attempt + 1))
+        await sleep(800 * (attempt + 1))
       }
     }
   }
@@ -64,10 +79,19 @@ async function chatOnce(
   messages: ChatMessage[],
   opts: ChatOptions,
   apiKey: string,
+  model: string,
 ): Promise<string> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), SCORING_TIMEOUT_MS)
   const signal = opts.signal ?? controller.signal
+
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    temperature: opts.temperature ?? 0.4,
+    max_tokens: opts.maxTokens ?? 800,
+  }
+  if (USE_JSON_MODE) body.response_format = { type: 'json_object' }
 
   try {
     const res = await fetch(OPENROUTER_ENDPOINT, {
@@ -79,24 +103,29 @@ async function chatOnce(
         'HTTP-Referer': window.location.origin,
         'X-Title': '三詞造句挑戰',
       },
-      body: JSON.stringify({
-        model: opts.model ?? DEFAULT_MODEL,
-        messages,
-        response_format: { type: 'json_object' },
-        temperature: opts.temperature ?? 0.4,
-        max_tokens: opts.maxTokens ?? 700,
-      }),
+      body: JSON.stringify(body),
     })
 
     if (!res.ok) {
       const text = await safeReadText(res)
+      console.error('[openrouter] HTTP error', {
+        status: res.status,
+        body: text.slice(0, 300),
+      })
       throw new ApiError(
-        `OpenRouter ${res.status}: ${text || res.statusText}`,
+        `OpenRouter ${res.status}：${text || res.statusText}`,
         res.status,
       )
     }
 
     const data = (await res.json()) as OpenRouterResponse
+    if (data.error) {
+      console.error('[openrouter] API error in body', data.error)
+      throw new ApiError(
+        `OpenRouter 錯誤：${data.error.message ?? JSON.stringify(data.error)}`,
+        typeof data.error.code === 'number' ? data.error.code : 400,
+      )
+    }
     const content = data.choices?.[0]?.message?.content
     if (!content) {
       throw new Error('OpenRouter 回傳空白內容')
@@ -104,7 +133,7 @@ async function chatOnce(
     return content
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
-      throw new Error('AI 評分超時，請重試')
+      throw new Error(`AI 評分超時（${SCORING_TIMEOUT_MS / 1000} 秒），請重試`)
     }
     throw err
   } finally {

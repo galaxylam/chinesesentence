@@ -369,22 +369,40 @@ function GameScreen({
 
       {state.phase === 'error' && (
         <Card tone="accent" className="mt-4 space-y-3">
-          <div className="text-amber-700 font-bold">⚠️ {state.message}</div>
-          <p className="text-sm text-amber-700/80">
-            老師暫時不能批改。你可以選擇「再試一次」或「跳過這題，自己做練習」。
+          <div className="flex items-start gap-2">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <div className="font-bold text-amber-800 mb-1">老師批改失敗</div>
+              <div className="text-sm text-amber-700 leading-relaxed break-words">
+                {state.message}
+              </div>
+            </div>
+          </div>
+          <details className="text-xs text-amber-700/80">
+            <summary className="cursor-pointer font-bold">查看你的答案</summary>
+            <p className="mt-2 p-2 bg-white/60 rounded-lg italic">{state.submission}</p>
+          </details>
+          <p className="text-xs text-amber-700/70">
+            💡 提示：打開瀏覽器 DevTools (F12) → Console 可以看到詳細錯誤
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
             <Button
               variant="outline"
-              onClick={() => dispatch({ type: 'BEGIN_ANSWERING' })}
+              className="flex-1"
+              onClick={() => {
+                dispatch({ type: 'BEGIN_ANSWERING' })
+                // Auto-resubmit the same sentence after a short delay.
+                setTimeout(() => scoreCurrent(state.submission), 50)
+              }}
             >
-              再試一次
+              🔁 重試這次
             </Button>
             <Button
+              className="flex-1"
               onClick={() =>
                 dispatch({
                   type: 'NEXT_QUIZ',
-                  quiz: generateQuiz(quiz.level),
+                  quiz: generateQuiz(state.quiz.level),
                 })
               }
             >

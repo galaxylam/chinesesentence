@@ -66,7 +66,8 @@ export function progressReducer(
         return { phase: 'answering', quiz: state.quiz, draft: '' }
       }
       if (state.phase === 'error') {
-        return state
+        // Retry the failed submission by going straight back to scoring.
+        return { phase: 'answering', quiz: state.quiz, draft: state.submission }
       }
       return state
 
@@ -93,18 +94,16 @@ export function progressReducer(
 
     case 'SCORE_ERROR':
       if (state.phase !== 'scoring' && state.phase !== 'rescoring') {
-        return { phase: 'error', message: action.message }
+        return state
       }
-      if (state.phase === 'scoring') {
-        return { phase: 'answering', quiz: state.quiz, draft: state.submission }
-      }
-      // state.phase === 'rescoring'
+      const errorQuiz = state.quiz
+      const errorSubmission =
+        state.phase === 'scoring' ? state.submission : state.revisedSubmission
       return {
-        phase: 'revising',
-        quiz: state.quiz,
-        firstResult: state.firstResult,
-        firstSubmission: state.firstSubmission,
-        draft: state.revisedSubmission,
+        phase: 'error',
+        message: action.message,
+        quiz: errorQuiz,
+        submission: errorSubmission,
       }
 
     case 'BEGIN_REVISE':

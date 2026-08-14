@@ -16,10 +16,13 @@ export const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completion
 export const DEFAULT_MODEL = '~deepseek/deepseek-v4-flash-latest'
 
 /** Request timeout for the scoring API call. */
-export const SCORING_TIMEOUT_MS = 25_000
+export const SCORING_TIMEOUT_MS = 60_000
 
 /** Max retry attempts on transient failures (network, 429, 5xx). */
 export const MAX_RETRIES = 1
+
+/** Whether to request OpenRouter's strict JSON mode. Some models ignore it. */
+export const USE_JSON_MODE = false
 
 /** Storage key for the OpenRouter API key (user-supplied). */
 export const API_KEY_STORAGE_KEY = 'three_word_sentence.apiKey'

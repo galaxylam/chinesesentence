@@ -272,4 +272,4 @@ export type GameState =
       revisedSubmission: string
     }
   | { phase: 'report'; report: LearningReport }
-  | { phase: 'error'; message: string }
+  | { phase: 'error'; message: string; quiz: Quiz; submission: string }

@@ -13,15 +13,27 @@ const MAX = {
  * Parse the raw string returned by OpenRouter into a typed ScoringResult.
  * Validates structure, clamps values, enforces max 2 feedback items, and
  * falls back to a safe zero-score result if parsing completely fails.
+ *
+ * Handles:
+ *  - Raw JSON
+ *  - JSON wrapped in ```json ... ``` or ``` ... ``` markdown fences
+ *  - Preamble text before the JSON object
  */
 export function parseScoringResult(raw: string): ScoringResult {
+  const cleaned = extractJson(raw)
+  if (!cleaned) {
+    console.warn('[parser] no JSON found in response', { raw: raw.slice(0, 300) })
+    return safeFail('AI 回傳了非 JSON 內容，請再試一次。')
+  }
+
   let json: unknown
   try {
-    json = JSON.parse(raw)
-  } catch {
-    return safeFail()
+    json = JSON.parse(cleaned)
+  } catch (e) {
+    console.warn('[parser] JSON.parse failed', { cleaned: cleaned.slice(0, 300), error: e })
+    return safeFail('AI 回傳的 JSON 無法解析，請再試一次。')
   }
-  if (!json || typeof json !== 'object') return safeFail()
+  if (!json || typeof json !== 'object') return safeFail('AI 回傳格式不正確。')
 
   const obj = json as Record<string, unknown>
   const b = (obj.breakdown ?? {}) as Record<string, unknown>
@@ -104,7 +116,7 @@ function num(v: unknown): number {
   return typeof v === 'number' ? v : 0
 }
 
-function safeFail(): ScoringResult {
+function safeFail(hint = 'AI 沒有回傳有效結果，請再試一次。'): ScoringResult {
   return {
     total: 0,
     breakdown: {
@@ -116,7 +128,7 @@ function safeFail(): ScoringResult {
       richness: 0,
     },
     feedback: [],
-    hint: 'AI 沒有回傳有效結果，請再試一次。',
+    hint,
     pattern: '',
     exampleSentence: '',
     wordClasses: [],
@@ -124,4 +136,36 @@ function safeFail(): ScoringResult {
     bonusSatisfied: false,
     allWordsUsedFlag: false,
   }
+}
+
+/** Extract the first balanced JSON object from a possibly-noisy string. */
+function extractJson(raw: string): string | null {
+  const trimmed = raw.trim()
+
+  // 1. Direct JSON
+  if (trimmed.startsWith('{')) return trimmed
+
+  // 2. Markdown fence: ```json ... ``` or ``` ... ```
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]+?)```/i)
+  if (fence) return fence[1].trim()
+
+  // 3. Find the first `{` and walk braces to find its matching `}`
+  const start = trimmed.indexOf('{')
+  if (start === -1) return null
+  let depth = 0
+  let inStr = false
+  let escape = false
+  for (let i = start; i < trimmed.length; i++) {
+    const ch = trimmed[i]
+    if (escape) { escape = false; continue }
+    if (ch === '\\' && inStr) { escape = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) return trimmed.slice(start, i + 1)
+    }
+  }
+  return null
 }
