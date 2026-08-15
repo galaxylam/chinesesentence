@@ -197,26 +197,20 @@ function GameScreen({
           ← 選關
         </Button>
         <div className="flex gap-1 overflow-x-auto">
-          {([1, 2, 3, 4, 5] as Difficulty[]).map((l) => {
-            const unlocked = progress.unlockedLevel >= l
-            return (
+          {([1, 2, 3, 4, 5] as Difficulty[]).map((l) => (
               <button
                 key={l}
-                onClick={() => unlocked && startLevel(l)}
-                disabled={!unlocked}
+                onClick={() => startLevel(l)}
                 className={
                   'shrink-0 px-3 py-1 rounded-full text-sm font-bold border-2 transition-colors tap ' +
                   (quiz.level === l
                     ? 'bg-primary text-white border-primary'
-                    : unlocked
-                      ? 'bg-white text-slate-600 border-slate-200 hover:border-primary'
-                      : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-primary')
                 }
               >
-                L{l}{!unlocked && ' 🔒'}
+                L{l}
               </button>
-            )
-          })}
+          ))}
         </div>
       </div>
 
