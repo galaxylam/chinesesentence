@@ -101,7 +101,9 @@ async function chatOnce(
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
-        'X-Title': '三詞造句挑戰',
+        // X-Title must be ASCII (fetch headers are ISO-8859-1 only).
+        // OpenRouter uses this for their leaderboard analytics — optional.
+        'X-Title': 'Three-Word Sentence Challenge',
       },
       body: JSON.stringify(body),
     })
