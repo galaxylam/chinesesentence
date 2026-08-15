@@ -16,6 +16,7 @@ import LevelSelector from './components/onboarding/LevelSelector'
 import IntroModal from './components/onboarding/IntroModal'
 import ProgressReport from './components/progress/ProgressReport'
 import Confetti from './components/ui/Confetti'
+import FullScreenLoader from './components/ui/FullScreenLoader'
 import Card from './components/ui/Card'
 import { Button } from './components/ui/Button'
 import { GameProvider, useGame } from './state/GameContext'
@@ -267,11 +268,6 @@ function GameScreen({
             minChars={tpl.minChars}
             placeholder={`例如：${quiz.words[0].text}，我…${quiz.words[quiz.words.length - 1].text}…`}
           />
-          {state.phase === 'scoring' && (
-            <div className="text-center text-sm text-slate-500 py-2">
-              老師批改中… ⏳
-            </div>
-          )}
         </div>
       )}
 
@@ -376,11 +372,6 @@ function GameScreen({
             minChars={tpl.minChars}
             placeholder="根據提示修改你的句子…"
           />
-          {state.phase === 'rescoring' && (
-            <div className="text-center text-sm text-slate-500 py-2">
-              老師再批改中… ⏳
-            </div>
-          )}
         </div>
       )}
 
@@ -437,50 +428,91 @@ function GameScreen({
       )}
 
       {state.phase === 'error' && (
-        <Card tone="accent" className="mt-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <span className="text-2xl">⚠️</span>
-            <div className="flex-1">
-              <div className="font-bold text-amber-800 mb-1">老師批改失敗</div>
-              <div className="text-sm text-amber-700 leading-relaxed break-words">
-                {state.message}
-              </div>
-            </div>
-          </div>
-          <details className="text-xs text-amber-700/80">
-            <summary className="cursor-pointer font-bold">查看你的答案</summary>
-            <p className="mt-2 p-2 bg-white/60 rounded-lg italic">{state.submission}</p>
-          </details>
-          <p className="text-xs text-amber-700/70">
-            💡 提示：打開瀏覽器 DevTools (F12) → Console 可以看到詳細錯誤
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 pt-1">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                dispatch({ type: 'BEGIN_ANSWERING' })
-                // Auto-resubmit the same sentence after a short delay.
-                setTimeout(() => scoreCurrent(state.submission), 50)
-              }}
-            >
-              🔁 重試這次
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() =>
-                dispatch({
-                  type: 'NEXT_QUIZ',
-                  quiz: generateQuiz(state.quiz.level),
-                })
-              }
-            >
-              跳過這題
-            </Button>
-          </div>
-        </Card>
+        <FullScreenError
+          message={state.message}
+          submission={state.submission}
+          onRetry={() => {
+            dispatch({ type: 'BEGIN_ANSWERING' })
+            setTimeout(() => scoreCurrent(state.submission), 50)
+          }}
+          onSkip={() =>
+            dispatch({
+              type: 'NEXT_QUIZ',
+              quiz: generateQuiz(state.quiz.level),
+            })
+          }
+        />
+      )}
+
+      {/* Full-screen blocking loader while AI is grading */}
+      {(state.phase === 'scoring' || state.phase === 'rescoring') && (
+        <FullScreenLoader
+          title={
+            state.phase === 'rescoring' ? '老師再批改中…' : '老師批改中…'
+          }
+          subtitle="AI 老師正在閱讀你的句子，請稍等一下"
+        />
       )}
     </>
+  )
+}
+
+/**
+ * Full-screen modal shown the moment AI scoring fails. Designed to be
+ * unmissable so the student immediately understands what's wrong and
+ * can retry / skip.
+ */
+function FullScreenError({
+  message,
+  submission,
+  onRetry,
+  onSkip,
+}: {
+  message: string
+  submission: string
+  onRetry: () => void
+  onSkip: () => void
+}) {
+  return (
+    <div
+      role="alertdialog"
+      aria-live="assertive"
+      className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm p-4 animate-spring-in"
+    >
+      <div className="bg-rose-50 w-full max-w-md rounded-3xl border-2 border-rose-300 shadow-card p-5 space-y-4">
+        <div className="flex items-start gap-3">
+          <span className="text-4xl leading-none" aria-hidden>⚠️</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-zh-xl font-black text-rose-800 mb-1">
+              老師批改失敗
+            </div>
+            <div className="text-zh-base font-bold text-rose-700 leading-relaxed break-words">
+              {message}
+            </div>
+          </div>
+        </div>
+
+        <details className="text-xs text-rose-700/80 bg-white/70 rounded-xl px-3 py-2">
+          <summary className="cursor-pointer font-bold">查看你的答案</summary>
+          <p className="mt-2 italic whitespace-pre-wrap break-words overflow-wrap-anywhere">
+            {submission}
+          </p>
+        </details>
+
+        <p className="text-xs text-rose-700/70 leading-relaxed">
+          💡 想看更詳細的錯誤：按 F12 → Console 分頁。
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+          <Button variant="outline" className="flex-1" onClick={onRetry}>
+            🔁 重試這次
+          </Button>
+          <Button className="flex-1" onClick={onSkip}>
+            跳過這題
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }
 
