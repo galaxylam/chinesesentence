@@ -47,6 +47,8 @@ function Shell() {
     () => !localStorage.getItem(INTRO_DISMISSED_KEY),
   )
   const [screen, setScreen] = useState<'menu' | 'play'>('menu')
+  // Track which level the user picked so GameScreen starts the correct one.
+  const [selectedLevel, setSelectedLevel] = useState<Difficulty>(1)
   const [showReport, setShowReport] = useState(false)
 
   // Detect 50-question milestone — open the report modal automatically.
@@ -101,11 +103,14 @@ function Shell() {
       {screen === 'menu' ? (
         <LevelSelector
           progress={progress}
-          onSelect={() => setScreen('play')}
+          onSelect={(lvl) => {
+            setSelectedLevel(lvl)
+            setScreen('play')
+          }}
         />
       ) : (
         <GameScreen
-          progress={progress}
+          selectedLevel={selectedLevel}
           onBackToMenu={() => setScreen('menu')}
         />
       )}
@@ -138,15 +143,16 @@ function Shell() {
 }
 
 function GameScreen({
-  progress,
+  selectedLevel,
   onBackToMenu,
 }: {
-  progress: ReturnType<typeof useProgress>['progress']
+  selectedLevel: Difficulty
   onBackToMenu: () => void
 }) {
   const { state, dispatch, scoreCurrent, startLevel } = useGame()
   const [confettiKey, setConfettiKey] = useState(0)
   const lastScoredTotal = useRef<number | null>(null)
+  const startedLevel = useRef<Difficulty | null>(null)
 
   const quiz =
     state.phase === 'showing' ||
@@ -177,10 +183,14 @@ function GameScreen({
     }
   }, [state])
 
-  // Initialise a round if none exists.
+  // Initialise a round at the level the user actually picked. We re-trigger
+  // whenever the user navigates back and selects a different level.
   useEffect(() => {
-    if (!quiz) startLevel(progress.unlockedLevel)
-  }, [quiz, startLevel, progress.unlockedLevel])
+    if (!quiz || startedLevel.current !== selectedLevel) {
+      startedLevel.current = selectedLevel
+      startLevel(selectedLevel)
+    }
+  }, [quiz, selectedLevel, startLevel])
 
   const tpl = quiz ? COMBO_TEMPLATES[quiz.level] : null
 
@@ -272,7 +282,7 @@ function GameScreen({
             <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-1">
               📝 你的答案
             </div>
-            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 break-keep">
+            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {state.submission}
             </p>
           </Card>
@@ -330,7 +340,7 @@ function GameScreen({
             <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-1">
               📝 你的初稿
             </div>
-            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 break-keep">
+            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {state.firstSubmission}
             </p>
           </Card>
@@ -380,7 +390,7 @@ function GameScreen({
             <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-1">
               📝 你的初稿（之前）
             </div>
-            <p className="font-zhSerif text-zh-base leading-relaxed text-slate-700 break-keep">
+            <p className="font-zhSerif text-zh-base leading-relaxed text-slate-700 whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {state.firstSubmission}
             </p>
           </Card>
@@ -388,7 +398,7 @@ function GameScreen({
             <div className="text-xs font-black uppercase tracking-wider text-slate-500 mb-1">
               你的修改
             </div>
-            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 break-keep">
+            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {state.revisedSubmission}
             </p>
           </Card>

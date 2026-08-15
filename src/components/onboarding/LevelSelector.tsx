@@ -1,6 +1,5 @@
 import type { Difficulty, ProgressData } from '../../types'
 import { COMBO_TEMPLATES } from '../../data/comboTemplates'
-import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
 
 interface LevelSelectorProps {
@@ -74,13 +73,6 @@ export default function LevelSelector({ progress, onSelect }: LevelSelectorProps
           </button>
         )
       })}
-      <Button
-        variant="outline"
-        className="w-full mt-2"
-        onClick={() => onSelect(progress.unlockedLevel)}
-      >
-        從已解鎖關卡開始
-      </Button>
     </div>
   )
 }
