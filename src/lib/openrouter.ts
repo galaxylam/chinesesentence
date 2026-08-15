@@ -114,6 +114,14 @@ async function chatOnce(
         status: res.status,
         body: text.slice(0, 300),
       })
+      // 401 (no key / bad key) and 403 (key disabled / expired) signal
+      // the user must re-enter their API key.
+      if (res.status === 401 || res.status === 403) {
+        throw new AuthError(
+          `OpenRouter ${res.status}：${text || res.statusText}`,
+          res.status,
+        )
+      }
       throw new ApiError(
         `OpenRouter ${res.status}：${text || res.statusText}`,
         res.status,
@@ -150,6 +158,14 @@ class ApiError extends Error {
     this.status = status
   }
 }
+
+/**
+ * Thrown when OpenRouter rejects the request because of an invalid,
+ * expired, or unauthorized API key (HTTP 401 / 403).
+ * Callers should clear the stored key and route the user back to the
+ * setup screen.
+ */
+export class AuthError extends ApiError {}
 
 async function safeReadText(res: Response): Promise<string> {
   try {

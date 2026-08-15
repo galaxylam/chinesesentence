@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import type { PropsWithChildren } from 'react'
 import type { GameAction, GameState } from './progressReducer'
 import { initialGameState, progressReducer } from './progressReducer'
-import { chat } from '../lib/openrouter'
+import { AuthError, chat } from '../lib/openrouter'
 import { buildScoringPrompt } from '../lib/promptBuilder'
 import { parseScoringResult } from '../lib/responseParser'
 import type { Difficulty, Quiz, ScoringResult } from '../types'
@@ -21,6 +21,10 @@ interface GameContextValue {
   apiKey: string
   /** Set API key at runtime. */
   setApiKey(key: string): void
+  /** Friendly reason the user was bounced back to the API-key gate. */
+  authMessage: string | null
+  /** Clear the authMessage after the user sees it. */
+  clearAuthMessage(): void
 }
 
 const GameContext = createContext<GameContextValue | null>(null)
@@ -39,6 +43,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   // apiKey is real state (not a ref) so updates trigger a re-render and
   // the context value memo recomputes correctly.
   const [apiKey, setApiKeyState] = useState<string>(() => loadApiKey())
+  const [authMessage, setAuthMessage] = useState<string | null>(null)
   const { recordScoring } = useProgress()
 
   const startLevel = useCallback((level: Difficulty) => {
@@ -55,6 +60,24 @@ export function GameProvider({ children }: PropsWithChildren) {
     }
     setApiKeyState(key)
   }, [])
+
+  const clearAuthMessage = useCallback(() => setAuthMessage(null), [])
+
+  /** Called when OpenRouter rejects the key — wipes stored key + returns to gate. */
+  const bounceToApiGate = useCallback(
+    (reason: string) => {
+      console.warn('[game] bouncing to API key gate:', reason)
+      try {
+        localStorage.removeItem(API_KEY_STORAGE_KEY)
+      } catch {
+        /* noop */
+      }
+      setApiKeyState('')
+      setAuthMessage(reason)
+      dispatch({ type: 'RESET' })
+    },
+    [],
+  )
 
   const scoreCurrent = useCallback(
     async (submission: string) => {
@@ -108,11 +131,20 @@ export function GameProvider({ children }: PropsWithChildren) {
           })
         }
       } catch (err) {
+        // Auth errors → boot the user back to the API-key setup screen.
+        if (err instanceof AuthError) {
+          bounceToApiGate(
+            err.status === 403
+              ? 'API key 已被停用或過期，請重新輸入。'
+              : 'API key 無效，請重新輸入。',
+          )
+          return
+        }
         const message = err instanceof Error ? err.message : 'AI 評分失敗'
         dispatch({ type: 'SCORE_ERROR', message })
       }
     },
-    [state, recordScoring, apiKey],
+    [state, recordScoring, apiKey, bounceToApiGate],
   )
 
   // Expose a window-level helper for debugging.
@@ -132,8 +164,10 @@ export function GameProvider({ children }: PropsWithChildren) {
       startLevel,
       apiKey,
       setApiKey,
+      authMessage,
+      clearAuthMessage,
     }),
-    [state, scoreCurrent, startLevel, setApiKey, apiKey],
+    [state, scoreCurrent, startLevel, setApiKey, apiKey, authMessage, clearAuthMessage],
   )
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>

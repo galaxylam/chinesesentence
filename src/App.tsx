@@ -41,7 +41,7 @@ export default function App() {
 }
 
 function Shell() {
-  const { apiKey, setApiKey } = useGame()
+  const { apiKey, setApiKey, authMessage, clearAuthMessage } = useGame()
   const { progress, reset } = useProgress()
   const [introOpen, setIntroOpen] = useState<boolean>(
     () => !localStorage.getItem(INTRO_DISMISSED_KEY),
@@ -67,8 +67,10 @@ function Shell() {
     return (
       <AppShell>
         <ApiKeyGate
+          authMessage={authMessage}
           onSet={(k) => {
             setApiKey(k)
+            clearAuthMessage()
           }}
         />
       </AppShell>
@@ -472,7 +474,13 @@ function GameScreen({
   )
 }
 
-function ApiKeyGate({ onSet }: { onSet: (k: string) => void }) {
+function ApiKeyGate({
+  onSet,
+  authMessage,
+}: {
+  onSet: (k: string) => void
+  authMessage?: string | null
+}) {
   return (
     <Card className="mt-6">
       <h2 className="text-zh-2xl font-black mb-2">歡迎來到三詞造句挑戰！</h2>
@@ -495,6 +503,21 @@ function ApiKeyGate({ onSet }: { onSet: (k: string) => void }) {
         <li>貼到下面輸入框（只會儲存在你的瀏覽器）</li>
         <li>按「開始遊戲」即可</li>
       </ol>
+
+      {authMessage && (
+        <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-3 mb-4 animate-spring-in">
+          <div className="flex items-start gap-2">
+            <span className="text-2xl">🔑</span>
+            <div className="flex-1">
+              <div className="font-bold text-rose-700 mb-1">API key 失效</div>
+              <div className="text-sm text-rose-700/90 leading-relaxed">
+                {authMessage}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ApiKeyForm onSet={onSet} />
       <p className="text-xs text-slate-400 mt-4">
         💡 OpenRouter 新用戶通常有少量免費額度，足夠試玩。
