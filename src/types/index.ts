@@ -54,6 +54,18 @@ export interface Word {
   colorToken: ColorToken
   /** Optional hint text shown if student clicks "?" on the card. */
   hint?: string
+  /**
+   * Compatibility tags — only used for idioms and nouns.
+   * The quiz generator pairs an idiom's `pairTags` with a noun's `tags`
+   * so that e.g. 小心翼翼 only ever appears next to fragile things.
+   * If a word has no tags it's considered compatible with anything.
+   */
+  tags?: string[]
+  /**
+   * For idioms only: which noun/verb tags this idiom naturally pairs with.
+   * See `tagGlossary` in wordLibrary.ts for the canonical tag names.
+   */
+  pairTags?: string[]
 }
 
 /** Chinese class name shown to students (e.g. "時間", "成語－動作類"). */
