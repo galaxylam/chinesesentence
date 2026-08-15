@@ -88,8 +88,8 @@ async function chatOnce(
   const body: Record<string, unknown> = {
     model,
     messages,
-    temperature: opts.temperature ?? 0.4,
-    max_tokens: opts.maxTokens ?? 800,
+    temperature: opts.temperature ?? 0.3,
+    max_tokens: opts.maxTokens ?? 2000,
   }
   if (USE_JSON_MODE) body.response_format = { type: 'json_object' }
 
