@@ -89,6 +89,8 @@ export function useSpeechRecognition(
   const supported = Ctor !== null
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const onFinalChunkRef = useRef(onFinalChunk)
+  const lastFinalRef = useRef<string>('')
+  const processedIndexRef = useRef<number>(0)
   const [listening, setListening] = useState(false)
   const [interim, setInterim] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -97,6 +99,12 @@ export function useSpeechRecognition(
   useEffect(() => {
     onFinalChunkRef.current = onFinalChunk
   }, [onFinalChunk])
+
+  // Reset dedup state when the user starts a new session.
+  useEffect(() => {
+    lastFinalRef.current = ''
+    processedIndexRef.current = 0
+  }, [listening])
 
   // Build the recognition instance once.
   useEffect(() => {
@@ -110,16 +118,36 @@ export function useSpeechRecognition(
     rec.onstart = () => {
       setListening(true)
       setError(null)
+      lastFinalRef.current = ''
+      processedIndexRef.current = 0
     }
 
     rec.onresult = (event) => {
       let finalChunk = ''
       let interimChunk = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Only walk indices we haven't processed yet — `resultIndex` is the
+      // first new index, but browsers can re-emit the same index after
+      // refining or finalising, so we additionally guard with a counter.
+      const start = Math.max(event.resultIndex, processedIndexRef.current)
+      for (let i = start; i < event.results.length; i++) {
         const r = event.results[i]
         if (r.isFinal) finalChunk += r[0].transcript
         else interimChunk += r[0].transcript
       }
+      processedIndexRef.current = Math.max(
+        processedIndexRef.current,
+        event.results.length,
+      )
+
+      // Dedupe identical consecutive finals. Chrome sometimes fires the
+      // same final text multiple times in a row, which previously caused
+      // "今天今天" when the user said "今天" only once.
+      if (finalChunk && finalChunk === lastFinalRef.current) {
+        finalChunk = ''
+      } else if (finalChunk) {
+        lastFinalRef.current = finalChunk
+      }
+
       if (interimChunk) setInterim(interimChunk)
       if (finalChunk) {
         setInterim('')

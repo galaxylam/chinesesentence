@@ -340,15 +340,44 @@ function VoicePanel({ value, onChange, disabled, tooShort }: VoicePanelProps) {
 }
 
 /**
- * Smart-append: drop leading whitespace, add a single space when joining
- * mid-sentence (if the previous text didn't end with punctuation/whitespace).
+ * Smart-append: drop leading whitespace, deduplicate against the tail
+ * of the current value, and join mid-sentence cleanly.
+ *
+ * The dedupe is defensive — `useSpeechRecognition` already filters
+ * identical consecutive finals, but browsers can also fire a "refined"
+ * transcript that overlaps the previous one (e.g. "今天" then "今天今天"
+ * for the same audio). If the new chunk's tail is already in the current
+ * text, we skip the overlapping portion.
  */
 function appendChunk(current: string, chunk: string): string {
   const trimmed = chunk.trimStart()
+  if (!trimmed) return current
   if (!current) return trimmed
-  const tail = current[current.length - 1]
-  if (tail === ' ' || tail === '。' || tail === '，' || tail === '\n') {
-    return current + trimmed
+
+  // 1. Exact suffix dedupe — same chunk was just added.
+  if (current.endsWith(trimmed)) return current
+
+  // 2. Overlap dedupe — the recognizer may re-emit a final whose first
+  //    characters overlap with the current tail (e.g. current="今天我",
+  //    new chunk="我很快樂" → skip "我", append "很快樂").
+  let overlap = 0
+  const maxOverlap = Math.min(current.length, trimmed.length)
+  for (let n = maxOverlap; n > 0; n--) {
+    if (current.endsWith(trimmed.slice(0, n))) {
+      overlap = n
+      break
+    }
   }
-  return current + trimmed
+  const next = trimmed.slice(overlap)
+
+  const tail = current[current.length - 1]
+  const needsSep =
+    tail !== ' ' &&
+    tail !== '。' &&
+    tail !== '，' &&
+    tail !== '；' &&
+    tail !== '：' &&
+    tail !== '\n' &&
+    tail !== '、'
+  return current + (needsSep ? '' : '') + next
 }
