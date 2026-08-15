@@ -10,6 +10,7 @@ import HintBox from './components/feedback/HintBox'
 import StarChallenge from './components/feedback/StarChallenge'
 import ExampleSentence from './components/feedback/ExampleSentence'
 import StructureBreakdown from './components/feedback/StructureBreakdown'
+import OverallComment from './components/feedback/OverallComment'
 import ReviseCTA from './components/feedback/ReviseCTA'
 import LevelSelector from './components/onboarding/LevelSelector'
 import IntroModal from './components/onboarding/IntroModal'
@@ -270,12 +271,40 @@ function GameScreen({
 
       {state.phase === 'feedback' && (
         <div className="space-y-5 mt-2 animate-spring-in">
+          {/* 你的答案 — always shown alongside feedback */}
+          <Card tone="accent">
+            <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-1">
+              📝 你的答案
+            </div>
+            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 break-keep">
+              {state.submission}
+            </p>
+          </Card>
+
           <Card>
             <ScoreDisplay result={state.result} />
           </Card>
           <StarChallenge earned={state.result.stars} />
+          <OverallComment comment={state.result.overallComment} />
           <FeedbackPanel items={state.result.feedback} />
           <HintBox hint={state.result.hint} />
+
+          {/* 老師示範例句 — always shown from round 1 */}
+          {state.result.exampleSentence && (
+            <Card tone="soft">
+              <ExampleSentence
+                sentence={state.result.exampleSentence}
+                highlightWords={state.quiz.words}
+              />
+            </Card>
+          )}
+
+          {state.result.pattern && (
+            <Card tone="soft">
+              <StructureBreakdown result={state.result} />
+            </Card>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
@@ -301,15 +330,31 @@ function GameScreen({
 
       {(state.phase === 'revising' || state.phase === 'rescoring') && (
         <div className="space-y-5 mt-2">
-          <Card tone="soft" className="text-sm text-slate-500">
-            <div className="font-bold text-slate-600 mb-1">你的初稿</div>
-            <p className="leading-relaxed">{state.firstSubmission}</p>
-            <div className="mt-3 pt-3 border-t border-slate-200">
-              <ScoreDisplay result={state.firstResult} />
+          <Card tone="accent">
+            <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-1">
+              📝 你的初稿
             </div>
+            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 break-keep">
+              {state.firstSubmission}
+            </p>
           </Card>
-          <HintBox hint={state.firstResult.hint} />
+          <Card tone="soft">
+            <div className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+              第一次評分
+            </div>
+            <ScoreDisplay result={state.firstResult} />
+          </Card>
+          <OverallComment comment={state.firstResult.overallComment} />
           <FeedbackPanel items={state.firstResult.feedback} />
+          <HintBox hint={state.firstResult.hint} />
+          {state.firstResult.exampleSentence && (
+            <Card tone="soft">
+              <ExampleSentence
+                sentence={state.firstResult.exampleSentence}
+                highlightWords={state.quiz.words}
+              />
+            </Card>
+          )}
           <WordTray words={state.quiz.words} />
           <SentenceInput
             value={state.phase === 'revising' ? state.draft : ''}
@@ -335,6 +380,22 @@ function GameScreen({
 
       {state.phase === 'example' && (
         <div className="space-y-5 mt-2 animate-spring-in">
+          <Card tone="accent">
+            <div className="text-xs font-black uppercase tracking-wider text-amber-700 mb-1">
+              📝 你的初稿（之前）
+            </div>
+            <p className="font-zhSerif text-zh-base leading-relaxed text-slate-700 break-keep">
+              {state.firstSubmission}
+            </p>
+          </Card>
+          <Card tone="soft">
+            <div className="text-xs font-black uppercase tracking-wider text-slate-500 mb-1">
+              你的修改
+            </div>
+            <p className="font-zhSerif text-zh-lg leading-relaxed text-slate-800 break-keep">
+              {state.revisedSubmission}
+            </p>
+          </Card>
           <Card>
             <div className="text-xs font-black uppercase tracking-wider text-emerald-700 mb-2">
               ✅ 最後得分
@@ -342,18 +403,20 @@ function GameScreen({
             <ScoreDisplay result={state.revisedResult} />
           </Card>
           <StarChallenge earned={state.revisedResult.stars} />
-          <Card tone="soft">
-            <ExampleSentence
-              sentence={
-                state.revisedResult.exampleSentence ||
-                state.revisedSubmission
-              }
-              highlightWords={state.quiz.words}
-            />
-          </Card>
-          <Card tone="soft">
-            <StructureBreakdown result={state.revisedResult} />
-          </Card>
+          <OverallComment comment={state.revisedResult.overallComment} />
+          {state.revisedResult.exampleSentence && (
+            <Card tone="soft">
+              <ExampleSentence
+                sentence={state.revisedResult.exampleSentence}
+                highlightWords={state.quiz.words}
+              />
+            </Card>
+          )}
+          {state.revisedResult.pattern && (
+            <Card tone="soft">
+              <StructureBreakdown result={state.revisedResult} />
+            </Card>
+          )}
           <ReviseCTA
             hasRevised
             onRevise={() => dispatch({ type: 'BEGIN_REVISE' })}

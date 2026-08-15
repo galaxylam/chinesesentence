@@ -1,12 +1,13 @@
 import type { FeedbackItem, ScoringResult } from '../types'
 
 const MAX = {
-  allWordsUsed: 20,
-  structure: 20,
-  positions: 20,
+  allWordsUsed: 15,
+  structure: 15,
+  positions: 10,
   naturalness: 15,
   logic: 15,
-  richness: 10,
+  punctuation: 10,
+  semantics: 20,
 } as const
 
 /**
@@ -43,10 +44,11 @@ export function parseScoringResult(raw: string): ScoringResult {
   const positions = clamp(num(b.positions), 0, MAX.positions)
   const naturalness = clamp(num(b.naturalness), 0, MAX.naturalness)
   const logic = clamp(num(b.logic), 0, MAX.logic)
-  const richness = clamp(num(b.richness), 0, MAX.richness)
+  const punctuation = clamp(num(b.punctuation ?? b.richness), 0, MAX.punctuation)
+  const semantics = clamp(num(b.semantics), 0, MAX.semantics)
 
   const computedTotal =
-    allWordsUsed + structure + positions + naturalness + logic + richness
+    allWordsUsed + structure + positions + naturalness + logic + punctuation + semantics
 
   const feedback = sanitizeFeedback(obj.feedback)
   const wordClasses = sanitizeWordClasses(obj.wordClasses)
@@ -60,9 +62,14 @@ export function parseScoringResult(raw: string): ScoringResult {
       positions,
       naturalness,
       logic,
-      richness,
+      punctuation,
+      semantics,
     },
     feedback,
+    overallComment:
+      typeof obj.overallComment === 'string'
+        ? obj.overallComment
+        : '老師還沒給整體評語，但細項回饋已在上方。',
     hint: typeof obj.hint === 'string' ? obj.hint : '再想想看，可以怎樣寫得更通順？',
     pattern: typeof obj.pattern === 'string' ? obj.pattern : '',
     exampleSentence: typeof obj.exampleSentence === 'string' ? obj.exampleSentence : '',
@@ -125,9 +132,11 @@ function safeFail(hint = 'AI 沒有回傳有效結果，請再試一次。'): Sc
       positions: 0,
       naturalness: 0,
       logic: 0,
-      richness: 0,
+      punctuation: 0,
+      semantics: 0,
     },
     feedback: [],
+    overallComment: '老師這次沒辦法回傳，請再試一次。',
     hint,
     pattern: '',
     exampleSentence: '',

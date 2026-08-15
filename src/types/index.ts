@@ -171,17 +171,21 @@ export interface ErrorRecord {
 export interface ScoringResult {
   total: number // 0–100
   breakdown: {
-    allWordsUsed: number // /20
-    structure: number // /20
-    positions: number // /20
+    allWordsUsed: number // /15
+    structure: number // /15
+    positions: number // /10
     naturalness: number // /15
     logic: number // /15
-    richness: number // /10
+    punctuation: number // /10
+    semantics: number // /20 — heaviest weight
   }
-  feedback: FeedbackItem[] // ≤2 items
+  feedback: FeedbackItem[] // ≤2 main issues
+  /** 整體評語 — 1–3 句整體性的深入評論（涵蓋詞意、標點、自然度等） */
+  overallComment: string
   hint: string
   pattern: string // e.g. "時間 + 人物 + 成語 + 地 + 把 + 名詞 + 動詞"
-  exampleSentence: string // empty when isRevision=false
+  /** Always present from round 1 onwards. */
+  exampleSentence: string
   wordClasses: Array<{ word: string; className: string }>
   stars: 1 | 2 | 3
   bonusSatisfied: boolean

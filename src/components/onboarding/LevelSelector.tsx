@@ -36,18 +36,14 @@ export default function LevelSelector({ progress, onSelect }: LevelSelectorProps
       </div>
       {([1, 2, 3, 4, 5] as Difficulty[]).map((lvl) => {
         const stats = progress.perLevel[lvl]
-        const unlocked = progress.unlockedLevel >= lvl
         const tpl = COMBO_TEMPLATES[lvl]
         return (
           <button
             key={lvl}
-            onClick={() => unlocked && onSelect(lvl)}
-            disabled={!unlocked}
+            onClick={() => onSelect(lvl)}
             className={cn(
               'w-full text-left rounded-3xl p-4 border-2 transition-all',
-              unlocked
-                ? 'bg-white border-slate-200 hover:border-primary hover:shadow-card active:scale-[0.98] cursor-pointer'
-                : 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed',
+              'bg-white border-slate-200 hover:border-primary hover:shadow-card active:scale-[0.98] cursor-pointer',
             )}
           >
             <div className="flex items-center gap-3">
@@ -66,16 +62,14 @@ export default function LevelSelector({ progress, onSelect }: LevelSelectorProps
                 <div className="text-xs text-slate-500 mt-0.5">
                   {LEVEL_INTRO[lvl]}
                 </div>
-                {unlocked && stats.attempts > 0 && (
+                {stats.attempts > 0 && (
                   <div className="text-xs text-slate-500 mt-1">
                     平均 {Math.round(stats.totalScore / stats.attempts)} 分 · ⭐ {stats.stars}
                     {stats.bestScore > 0 && ` · 最高 ${stats.bestScore}`}
                   </div>
                 )}
               </div>
-              <div className="text-3xl">
-                {unlocked ? '🎮' : '🔒'}
-              </div>
+              <div className="text-3xl">🎮</div>
             </div>
           </button>
         )

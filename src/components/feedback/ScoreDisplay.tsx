@@ -12,12 +12,13 @@ interface Row {
 }
 
 const ROWS: Array<Omit<Row, 'value'>> = [
-  { label: '三個詞都用對', max: 20 },
-  { label: '句子結構完整', max: 20 },
-  { label: '詞語位置正確', max: 20 },
+  { label: '三個詞都用對', max: 15 },
+  { label: '句子結構完整', max: 15 },
+  { label: '詞語位置正確', max: 10 },
   { label: '搭配自然', max: 15 },
   { label: '語意連貫', max: 15 },
-  { label: '表達豐富', max: 10 },
+  { label: '標點符號', max: 10 },
+  { label: '詞意精準', max: 20 },
 ]
 
 const TIER: Record<string, { ring: string; text: string; label: string }> = {
@@ -41,7 +42,8 @@ export default function ScoreDisplay({ result }: ScoreDisplayProps) {
     '詞語位置正確': result.breakdown.positions,
     '搭配自然': result.breakdown.naturalness,
     '語意連貫': result.breakdown.logic,
-    '表達豐富': result.breakdown.richness,
+    '標點符號': result.breakdown.punctuation,
+    '詞意精準': result.breakdown.semantics,
   }
 
   return (
